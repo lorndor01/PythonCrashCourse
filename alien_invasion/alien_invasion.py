@@ -1,5 +1,6 @@
 import sys
 from time import sleep
+import json
 
 import pygame
 from settings import Settings
@@ -16,6 +17,27 @@ class AlienInvasion:
 
     def __init__(self, fullscreen):
         """Initialize the game and create game resources."""
+        self.session_name = None
+        while self.session_name == None:
+            possible_name = input("Please enter a name 4 letters or less for " +
+                "your session: ")
+            if len(possible_name) > 4:
+                print("Your name me must be 4 letters or less.")
+            elif len(possible_name) < 1:
+                print("Your name must be a least 1 letter long.")
+            else:
+                self.session_name = possible_name
+        self.high_score_file = "high_score.json"
+        try:
+            with open(self.high_score_file, 'r') as f:
+                self.high_score_holder = json.load(f)['name']
+        except FileNotFoundError:
+            with open(self.high_score_file, 'w') as f:
+                self.high_score_holder = self.session_name
+                player = {'name':self.session_name, 'score':0}
+                json.dump(player, f)
+
+
         pygame.init()
         self.settings = Settings()
 
@@ -50,6 +72,7 @@ class AlienInvasion:
 
     def run_game(self):
         """Main loop for the game."""
+
         while True:
             # Watch for keyboard and mouse events.
             self._check_events()
@@ -105,6 +128,8 @@ class AlienInvasion:
             #Reset the game statistics
             self.game_stats.reset_stats()
             self.score_board.prep_score()
+            self.score_board.prep_level()
+            self.score_board.prep_ships()
             self.game_stats.game_active = True
 
             #Get rid of remaining aliens and bullets
@@ -163,11 +188,14 @@ class AlienInvasion:
             for aliens in collisions.values():
                 self.game_stats.score += self.settings.alien_points * len(aliens)
             self.score_board.prep_score()
+            self.score_board.check_high_score()
         #Replenish fleet if empty.
         if not self.aliens:
             self.bullets.empty()
             self._create_fleet()
             self.settings.increase_speed()
+            self.game_stats.level +=1
+            self.score_board.prep_level()
 
     def _check_alien_ship_collisions(self):
         """Check to see if any aliens hit the shift"""
@@ -231,6 +259,7 @@ class AlienInvasion:
         """Respond to the ship being hit by an alien"""
         if self.game_stats.ships_left > 0:
             self.game_stats.ships_left -= 1
+            self.score_board.prep_ships()
             self.aliens.empty()
             self.bullets.empty()
 
@@ -242,6 +271,20 @@ class AlienInvasion:
             sleep(0.5)
         else:
             self.game_stats.game_active = False
+
+            #Load in new high-score and player name if score is higher than 
+            #score currently stored.
+            current_high_score = 0
+            with open(self.high_score_file) as f:
+                player = json.load(f)
+                current_high_score = player['score']
+            
+            if self.game_stats.high_score > current_high_score:
+                with open(self.high_score_file, 'w') as f:
+                    player = {'name':self.session_name, 'score':self.game_stats.high_score}
+                    json.dump(player, f)
+
+
             pygame.mouse.set_visible(True)
 
 
