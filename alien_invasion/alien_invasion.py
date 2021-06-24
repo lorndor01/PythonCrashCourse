@@ -10,6 +10,7 @@ from alien import Alien
 from game_stats import GameStats
 from button import Button
 from score_board import ScoreBoard
+from sound_mixer import SoundMixer
 
 
 class AlienInvasion:
@@ -67,6 +68,8 @@ class AlienInvasion:
         self.play_button = Button(self, "Play")
 
         self.score_board = ScoreBoard(self)
+
+        self.mixer = SoundMixer()
 
 
 
@@ -164,6 +167,7 @@ class AlienInvasion:
     def _fire_bullet(self):
         """Create a bullet and add it to the bullets group"""
         if len(self.bullets) < self.settings.bullets_allowed:
+            self.mixer.play_bullet_firing()
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
 
@@ -185,6 +189,7 @@ class AlienInvasion:
             self.bullets, self.aliens, True, True)
 
         if collisions:
+            self.mixer.play_alien_hit()
             for aliens in collisions.values():
                 self.game_stats.score += self.settings.alien_points * len(aliens)
             self.score_board.prep_score()
@@ -197,9 +202,6 @@ class AlienInvasion:
             self.game_stats.level +=1
             self.score_board.prep_level()
 
-    def _check_alien_ship_collisions(self):
-        """Check to see if any aliens hit the shift"""
-        
 
     def _create_alien(self, alien_number, row_number):
         """Create an alien and place it in the row."""
@@ -257,6 +259,9 @@ class AlienInvasion:
 
     def _ship_hit(self):
         """Respond to the ship being hit by an alien"""
+        #Explosion will play no matter what.
+        self.mixer.play_ship_alien_collision()
+
         if self.game_stats.ships_left > 0:
             self.game_stats.ships_left -= 1
             self.score_board.prep_ships()
